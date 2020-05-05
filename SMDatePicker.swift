@@ -14,12 +14,12 @@ protocol SMDatePickerDelegate: class {
     func didSelect(date: Date)
 }
 
-@IBDesignable final class SMDatePicker: UIView {
+final class SMDatePicker: NSObject {
     
     //MARK:- Public Properties
     weak var delegate: SMDatePickerDelegate?
     
-    @IBInspectable var minimumDate: Date? {
+    var minimumDate: Date? {
         set {
             datePicker.minimumDate = newValue
         } get {
@@ -27,7 +27,7 @@ protocol SMDatePickerDelegate: class {
         }
     }
     
-    @IBInspectable var maximumDate: Date? {
+    var maximumDate: Date? {
         set {
             datePicker.maximumDate = newValue
         } get {
@@ -35,20 +35,20 @@ protocol SMDatePickerDelegate: class {
         }
     }
     
-    @IBInspectable var title: String = "" {
+    var title: String = "" {
         didSet {
             titleLabel.text = title
             titleLabel.sizeToFit()
         }
     }
     
-    @IBInspectable var confirmationTitle = "" {
+    var confirmationTitle = "" {
         didSet {
             confirmationButton.setTitle(confirmationTitle, for: .normal)
         }
     }
     
-    @IBInspectable var cancelTitle: String = "" {
+    var cancelTitle: String = "" {
         didSet {
             if cancelImage == nil {
                 cancelButton.setTitle(cancelTitle, for: .normal)
@@ -56,7 +56,7 @@ protocol SMDatePickerDelegate: class {
         }
     }
     
-    @IBInspectable var cancelImage: UIImage? {
+    var cancelImage: UIImage? {
         set {
             if let image = newValue {
                 cancelButton.setImage(image, for: .normal)
@@ -70,7 +70,7 @@ protocol SMDatePickerDelegate: class {
         }
     }
     
-    @IBInspectable var cancelButtonTextColor: UIColor? {
+    var cancelButtonTextColor: UIColor? {
         set {
             cancelButton.titleLabel?.textColor = newValue
         } get {
@@ -78,7 +78,7 @@ protocol SMDatePickerDelegate: class {
         }
     }
     
-    @IBInspectable var confirmationButtonTextColor: UIColor? {
+    var confirmationButtonTextColor: UIColor? {
         set {
             confirmationButton.titleLabel?.textColor = newValue
         } get {
@@ -86,7 +86,7 @@ protocol SMDatePickerDelegate: class {
         }
     }
     
-    @IBInspectable var cancelButtonTextFont: UIFont? {
+    var cancelButtonTextFont: UIFont? {
         set {
             cancelButton.titleLabel?.font = newValue
         } get {
@@ -94,7 +94,7 @@ protocol SMDatePickerDelegate: class {
         }
     }
     
-    @IBInspectable var confirmationButtonTextFont: UIFont? {
+    var confirmationButtonTextFont: UIFont? {
         set {
             confirmationButton.titleLabel?.font = newValue
         } get {
@@ -102,7 +102,7 @@ protocol SMDatePickerDelegate: class {
         }
     }
     
-    @IBInspectable var titleTextColor: UIColor? {
+    var titleTextColor: UIColor? {
         set {
             titleLabel.textColor = newValue
         } get {
@@ -110,7 +110,7 @@ protocol SMDatePickerDelegate: class {
         }
     }
     
-    @IBInspectable var titleFont: UIFont? {
+    var titleFont: UIFont? {
         set {
             titleLabel.font = newValue
         } get {
@@ -118,7 +118,7 @@ protocol SMDatePickerDelegate: class {
         }
     }
     
-    @IBInspectable var headerViewBackgroundColor: UIColor? {
+    var headerViewBackgroundColor: UIColor? {
         set {
             headerView.backgroundColor = newValue
         } get {
@@ -126,7 +126,7 @@ protocol SMDatePickerDelegate: class {
         }
     }
     
-    @IBInspectable var pickerViewBackgroundColor: UIColor? {
+    var pickerViewBackgroundColor: UIColor? {
         set {
             datePicker.backgroundColor = newValue
         } get {
@@ -136,18 +136,23 @@ protocol SMDatePickerDelegate: class {
     
     //MARK:- Private Properties
     
+    private let view: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.init(white: 0, alpha: 0.5)
+
+        return view
+    }()
+    
     private let headerView: UIView = {
         let headerView = UIView()
         headerView.layer.cornerRadius = 14.0
-        
         headerView.translatesAutoresizingMaskIntoConstraints = false
         return headerView
     }()
     
     private let confirmationButton: UIButton = {
         let confirmationButton = UIButton(type: .system)
-        confirmationButton.addTarget(self, action: #selector(confirmTapped(_:)), for: .touchDown)
-        
+        confirmationButton.addTarget(self, action: #selector(confirmTapped), for: .touchDown)
         confirmationButton.translatesAutoresizingMaskIntoConstraints = false
         return confirmationButton
     }()
@@ -155,13 +160,11 @@ protocol SMDatePickerDelegate: class {
     private let cancelButton: UIButton = {
         let cancelButton = UIButton(type: .system)
         cancelButton.translatesAutoresizingMaskIntoConstraints = false
-        cancelButton.addTarget(self, action: #selector(cancelTapped(_:)), for: .touchDown)
         return cancelButton
     }()
     
     private let titleLabel: UILabel = {
         let titleLabel = UILabel()
-        titleLabel.text = "test"
         titleLabel.textColor = .black
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         return titleLabel
@@ -185,6 +188,7 @@ protocol SMDatePickerDelegate: class {
         let containerView = UIView()
         containerView.translatesAutoresizingMaskIntoConstraints = false
         containerView.backgroundColor = .white
+        containerView.layer.cornerRadius = 20
         return containerView
     }()
     
@@ -196,36 +200,28 @@ protocol SMDatePickerDelegate: class {
     
     //MARK:- Overriden
     //275
-    override var intrinsicContentSize: CGSize { CGSize(width: bounds.width, height: UIScreen.main.bounds.height)}
+    var intrinsicContentSize: CGSize { CGSize(width: view.bounds.width, height: UIScreen.main.bounds.height)}
     
-    override class var requiresConstraintBasedLayout: Bool { return true }
+    //override class var requiresConstraintBasedLayout: Bool { return true }
     
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        commonInit()
-    }
-    
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        commonInit()
-        
+    override init() {
+        super.init()
+        setupView()
+        setUpLayout()
+        confirmationButton.addTarget(self, action: #selector(confirmTapped), for: .touchDown)
+        cancelButton.addTarget(self, action: #selector(cancelTapped), for: .touchDown)
     }
     
     //MARK:- Private Methods
     
-    private func commonInit() {
-        setupView()
-        setUpLayout()
-    }
-    
     private func setupView() {
-        addSubview(containerView)
-        addSubview(headerView)
-        addSubview(datePicker)
+        view.addSubview(containerView)
+        view.addSubview(headerView)
+        view.addSubview(datePicker)
         headerView.addSubview(titleLabel)
         headerView.addSubview(cancelButton)
         headerView.addSubview(confirmationButton)
-        addSubview(separatorView)
+        view.addSubview(separatorView)
         configureDefaults()
     }
     
@@ -235,31 +231,28 @@ protocol SMDatePickerDelegate: class {
         confirmationButtonTextColor = defaultBlueColorForButton
         confirmationButtonTextFont = defaultFontForActions
         titleFont = defaultFontForTitle
-        
         cancelTitle = "X"
         confirmationTitle = "OK"
-        
-        backgroundColor = UIColor.init(white: 0, alpha: 0.5)
     }
     
     private func setUpLayout() {
         
         containerView.heightAnchor.constraint(equalToConstant: 276).isActive = true
-        containerView.leadingAnchor.constraint(equalTo: leadingAnchor).isActive = true
-        containerView.trailingAnchor.constraint(equalTo: trailingAnchor).isActive = true
-        containerView.bottomAnchor.constraint(equalTo: bottomAnchor).isActive = true
+        containerView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
+        containerView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
+        containerView.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
         
         setupHeaderViewAndSubViewsLayout()
         
         separatorView.heightAnchor.constraint(equalToConstant: 0.5).isActive = true
         separatorView.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: 0).isActive = true
-        separatorView.leadingAnchor.constraint(equalTo: leadingAnchor).isActive = true
-        separatorView.trailingAnchor.constraint(equalTo: trailingAnchor).isActive = true
+        separatorView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
+        separatorView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
         
         datePicker.topAnchor.constraint(equalTo: separatorView.bottomAnchor, constant: 0).isActive = true
-        datePicker.leadingAnchor.constraint(equalTo: leadingAnchor).isActive = true
-        datePicker.trailingAnchor.constraint(equalTo: trailingAnchor).isActive = true
-        datePicker.bottomAnchor.constraint(equalTo: bottomAnchor).isActive = true
+        datePicker.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
+        datePicker.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
+        datePicker.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
     }
     
     private func setupHeaderViewAndSubViewsLayout() {
@@ -288,22 +281,22 @@ protocol SMDatePickerDelegate: class {
     }
     
     private func animateToHide(_ hide: Bool) {
-        let y = hide ? frame.origin.y + intrinsicContentSize.height : frame.origin.y - intrinsicContentSize.height
+        let y = hide ? view.frame.origin.y + intrinsicContentSize.height : view.frame.origin.y - intrinsicContentSize.height
         UIView.animate(withDuration: 0.3, animations: {
-            self.frame.origin.y = y
+            self.view.frame.origin.y = y
         }) { (_) in
             if hide {
-                self.removeFromSuperview()
+                self.view.removeFromSuperview()
             }
         }
     }
     
-    @objc private func cancelTapped(_ sender: UIButton) {
+    @objc private func cancelTapped() {
         delegate?.didCancelDateSelection()
         animateToHide(true)
     }
     
-    @objc private func confirmTapped(_ sender: UIButton) {
+    @objc private func confirmTapped() {
         delegate?.didSelect(date: datePicker.date)
         animateToHide(true)
     }
@@ -311,8 +304,8 @@ protocol SMDatePickerDelegate: class {
     //MARK:- Public
     
     func present(from viewController: UIViewController) {
-        viewController.view.addSubview(self)
-        frame = CGRect(x: 0, y: viewController.view.bounds.height, width: viewController.view.bounds.width, height: intrinsicContentSize.height)
+        viewController.view.addSubview(view)
+        view.frame = CGRect(x: 0, y: viewController.view.bounds.height, width: viewController.view.bounds.width, height: intrinsicContentSize.height)
         animateToHide(false)
     }
 }
